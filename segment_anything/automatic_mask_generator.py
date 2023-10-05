@@ -48,6 +48,7 @@ class SamAutomaticMaskGenerator:
         crop_n_points_downscale_factor: int = 1,
         point_grids: Optional[List[np.ndarray]] = None,
         min_mask_region_area: int = 0,
+        multimask_output: bool = True,
         output_mode: str = "binary_mask",
     ) -> None:
         """
@@ -93,6 +94,15 @@ class SamAutomaticMaskGenerator:
             'uncompressed_rle', or 'coco_rle'. 'coco_rle' requires pycocotools.
             For large resolutions, 'binary_mask' may consume large amounts of
             memory.
+
+        > params for predictor:
+
+          multimask_output (bool): If true, the predictor will return three masks.
+            For ambiguous input prompts (such as a single click), this will often
+            produce better masks than a single prediction. If only a single
+            mask is needed, the model's predicted quality score can be used
+            to select the best mask. For non-ambiguous prompts, such as multiple
+            input prompts, multimask_output=False can give better results.
         """
 
         assert (points_per_side is None) != (
@@ -131,6 +141,7 @@ class SamAutomaticMaskGenerator:
         self.crop_overlap_ratio = crop_overlap_ratio
         self.crop_n_points_downscale_factor = crop_n_points_downscale_factor
         self.min_mask_region_area = min_mask_region_area
+        self.multimask_output = multimask_output
         self.output_mode = output_mode
 
     @torch.no_grad()
@@ -279,7 +290,7 @@ class SamAutomaticMaskGenerator:
         masks, iou_preds, _ = self.predictor.predict_torch(
             in_points[:, None, :],
             in_labels[:, None],
-            multimask_output=True,
+            multimask_output=self.multimask_output,
             return_logits=True,
         )
 
